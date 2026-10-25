@@ -1,0 +1,5 @@
+[[allowlists]]
+description = "Ignore local Python virtual environments"
+paths = [
+  '''(^|/)\.venv(-1)?/''',
+]

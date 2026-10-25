@@ -19,6 +19,7 @@ WORKDIR /app
 
 COPY --from=builder /install /install
 ENV PYTHONPATH=/install
+ENV APP_HOST=0.0.0.0
 
 COPY app/ ./app/
 

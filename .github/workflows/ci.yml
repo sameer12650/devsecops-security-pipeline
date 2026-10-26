@@ -55,3 +55,47 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
           severity: CRITICAL,HIGH
+
+  deploy-to-ec2:
+    name: Deploy to AWS EC2
+    runs-on: [self-hosted, Linux, X64]
+
+    needs:
+      - security-and-tests
+      - container-security
+
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/master' ||
+       github.ref == 'refs/heads/main')
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Build application image
+        run: |
+          sudo docker build -t devsecops-pipeline:${{ github.sha }} .
+
+      - name: Replace running application
+        run: |
+          sudo docker rm -f devsecops-app || true
+          sudo docker run -d \
+            --name devsecops-app \
+            --restart unless-stopped \
+            -p 5000:5000 \
+            devsecops-pipeline:${{ github.sha }}
+
+      - name: Verify application health
+        run: |
+          for i in {1..10}; do
+            if curl -fsS http://127.0.0.1:5000/health; then
+              echo "Application health check passed."
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "Application health check failed."
+          sudo docker logs devsecops-app
+          exit 1
